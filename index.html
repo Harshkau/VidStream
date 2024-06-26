@@ -46,7 +46,7 @@
             font-size: 16px;
             border: 1px solid #3c3c42;
             border-radius: 8px;
-            width: 70%;
+            width: 60%;
             background-color: #2d2d33; 
             color: #ffffff;
             outline: none;
@@ -78,6 +78,21 @@
 
         button i {
             margin-right: 8px;
+        }
+
+        .mic {
+            border-radius: 50%;
+            background-color: #ffea00;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 48px;
+            height: 48px;
+        }
+
+        .mic:hover {
+            background-color: #dcd137;
         }
 
         .search-results {
@@ -157,6 +172,12 @@
                 padding: 12px;
                 font-size: 14px;
             }
+
+            .mic {
+                padding: 8px;
+                width: 40px;
+                height: 40px;
+            }
         }
 
         @media (orientation: landscape) and (max-width: 600px) {
@@ -177,6 +198,7 @@
         <form id="search-form">
             <input type="text" id="search-input" placeholder="Enter video title...">
             <button type="submit"><i class="fas fa-search"></i> Search</button>
+            <button type="button" class="mic" id="voice-search"><i class="fas fa-microphone"></i></button>
         </form>
         <div id="player-container" class="player-container">
             <div id="player" class="player"></div>
@@ -190,6 +212,7 @@
         const searchResults = document.getElementById('search-results');
         const playerContainer = document.getElementById('player-container');
         const player = document.getElementById('player');
+        const voiceSearchBtn = document.getElementById('voice-search');
 
         form.addEventListener('submit', function(event) {
             event.preventDefault();
@@ -199,6 +222,22 @@
                 return;
             }
             searchYouTube(searchTerm);
+        });
+
+        voiceSearchBtn.addEventListener('click', function() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-US';
+            recognition.start();
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript;
+                searchYouTube(transcript);
+            };
+
+            recognition.onerror = function(event) {
+                alert('Voice search error: ' + event.error);
+            };
         });
 
         function searchYouTube(searchTerm) {
@@ -258,11 +297,9 @@
             player.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // Default search on page load with random popular search term
+        // Default search on page load
         window.onload = function() {
-            const popularSearchTerms = ['popular videos', 'latest news', 'trending', 'music videos', 'tech reviews'];
-            const randomTerm = popularSearchTerms[Math.floor(Math.random() * popularSearchTerms.length)];
-            searchYouTube(randomTerm);
+            searchYouTube('popular videos');
         };
     </script>
 </body>
