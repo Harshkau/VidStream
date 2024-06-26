@@ -260,7 +260,7 @@
 
         // Default search on page load with random popular search term
         window.onload = function() {
-            const popularSearchTerms = [ 'latest news,gaming videos, indian music videos', 'trending', 'gaming videos', 'tech reviews'];
+            const popularSearchTerms = ['popular videos', 'latest news', 'trending', 'music videos', 'tech reviews'];
             const randomTerm = popularSearchTerms[Math.floor(Math.random() * popularSearchTerms.length)];
             searchYouTube(randomTerm);
         };
