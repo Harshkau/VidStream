@@ -4,23 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="https://cdn3.iconfinder.com/data/icons/3d-applications/512/app_icons_media___logo_youtube_video_multimedia_stream_download_play_clip.png">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"> 
     
     <title>VidStream</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #0e0e10; 
+            background-color: #0e0e10;
+            color: #ffffff;
             margin: 0;
             padding: 0;
-            color: #ffffff; 
         }
 
         .container {
             max-width: 800px;
             margin: 20px auto;
             padding: 20px;
-            background-color: #1f1f24; 
+            background-color: #1f1f24;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
             border-radius: 12px;
         }
@@ -38,38 +38,35 @@
             justify-content: center;
             align-items: center;
             margin-bottom: 20px;
-            gap: 10px;
         }
 
         input[type="text"] {
             padding: 14px;
             font-size: 16px;
             border: 1px solid #3c3c42;
-            border-radius: 8px;
-            width: 70%;
-            background-color: #2d2d33; 
+            border-radius: 8px 0 0 8px;
+            width: 100%;
+            max-width: 600px;
+            background-color: #2d2d33;
             color: #ffffff;
             outline: none;
-            flex: 1;
-            min-width: 150px;
         }
 
         input[type="text"]::placeholder {
-            color: #888888; 
+            color: #888888;
         }
 
         button {
-            padding: 16px 24px;
+            padding: 14px;
             font-size: 16px;
             background-color: #ffea00;
             color: #ffffff;
             border: none;
-            border-radius: 8px;
+            border-radius: 0 8px 8px 0;
             cursor: pointer;
             transition: background-color 0.3s ease;
             display: flex;
             align-items: center;
-            justify-content: center;
         }
 
         button:hover {
@@ -143,30 +140,19 @@
         a {
             text-decoration: none;
         }
-       
-        /* Responsive adjustments */
+
         @media (max-width: 600px) {
             input[type="text"] {
-                width: auto;
                 font-size: 14px;
-                padding: 12px;
             }
 
             button {
-                width: auto;
-                padding: 12px;
+                padding: 15px;
                 font-size: 14px;
             }
-        }
 
-        @media (orientation: landscape) and (max-width: 600px) {
-            .player-container {
-                margin-top: 10px;
-            }
-
-            .player {
-                width: 100%;
-                padding-bottom: 75%;
+            h1 {
+                font-size: 24px;
             }
         }
     </style>
@@ -175,7 +161,7 @@
     <div class="container">
         <h1>VidStream</h1>
         <form id="search-form">
-            <input type="text" id="search-input" placeholder="Enter video title...">
+            <input type="text" id="search-input" placeholder="Enter video title or channel name...">
             <button type="submit"><i class="fas fa-search"></i> Search</button>
         </form>
         <div id="player-container" class="player-container">
@@ -191,6 +177,8 @@
         const playerContainer = document.getElementById('player-container');
         const player = document.getElementById('player');
 
+        document.addEventListener('DOMContentLoaded', loadPopularVideos);
+
         form.addEventListener('submit', function(event) {
             event.preventDefault();
             const searchTerm = searchInput.value.trim();
@@ -198,12 +186,29 @@
                 alert('Please enter a search term');
                 return;
             }
-            searchYouTube(searchTerm);
+            if (searchTerm.includes('channel:')) {
+                const channelName = searchTerm.split('channel:')[1].trim();
+                searchYouTubeChannel(channelName);
+            } else {
+                searchYouTube(searchTerm);
+            }
         });
 
+        function loadPopularVideos() {
+            const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
+            const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=US&maxResults=10&key=${apiKey}`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    displayResults(data.items);
+                })
+                .catch(error => console.error('Error fetching popular videos:', error));
+        }
+
         function searchYouTube(searchTerm) {
-            const apiKey = 'AIzaSyCxMygG0FgRoIVYrC8nJblnTNfye7LobSg';
-            const maxResults = 10;
+            const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
+            const maxResults = 100;
             const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&type=video&q=${searchTerm}&maxResults=${maxResults}`;
 
             fetch(apiUrl)
@@ -214,12 +219,26 @@
                 .catch(error => console.error('Error fetching data:', error));
         }
 
+        function searchYouTubeChannel(channelName) {
+            const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
+            const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&type=channel&q=${channelName}`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const channelId = data.items[0].id.channelId;
+                    fetchChannelVideos(channelId);
+                })
+                .catch(error => console.error('Error fetching channel data:', error));
+        }
+
+      
+
         function displayResults(items) {
             searchResults.innerHTML = '';
-            playerContainer.style.display = 'none';
 
             items.forEach(item => {
-                const videoId = item.id.videoId;
+                const videoId = item.id.videoId || item.id.channelId;
                 const videoTitle = item.snippet.title;
                 const videoDescription = item.snippet.description;
                 const videoThumbnail = item.snippet.thumbnails.medium.url;
@@ -255,15 +274,8 @@
             player.appendChild(iframe);
 
             playerContainer.style.display = 'block';
-            player.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            playerContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-
-        // Default search on page load with random popular search term
-        window.onload = function() {
-            const popularSearchTerms = ['popular videos', 'latest news', 'trending', 'music videos', 'tech reviews'];
-            const randomTerm = popularSearchTerms[Math.floor(Math.random() * popularSearchTerms.length)];
-            searchYouTube(randomTerm);
-        };
     </script>
 </body>
 </html>
