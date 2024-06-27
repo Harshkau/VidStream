@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="https://cdn3.iconfinder.com/data/icons/3d-applications/512/app_icons_media___logo_youtube_video_multimedia_stream_download_play_clip.png">
-    
+        <link rel="icon" href="https://cdn3.iconfinder.com/data/icons/3d-applications/512/app_icons_media___logo_youtube_video_multimedia_stream_download_play_clip.png">
+
     <title>VidStream</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
@@ -75,6 +75,24 @@
 
         button i {
             margin-right: 8px;
+        }
+
+        .mic-button {
+            padding: 14px;
+            font-size: 16px;
+            background-color: #ffea00;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            margin-left: 10px;
+        }
+
+        .mic-button:hover {
+            background-color: #dcd137;
         }
 
         .search-results {
@@ -163,6 +181,7 @@
         <form id="search-form">
             <input type="text" id="search-input" placeholder="Enter video title or channel name...">
             <button type="submit"><i class="fas fa-search"></i> Search</button>
+            <button type="button" class="mic-button" id="mic-button"><i class="fas fa-microphone"></i></button>
         </form>
         <div id="player-container" class="player-container">
             <div id="player" class="player"></div>
@@ -170,112 +189,147 @@
         <div id="search-results" class="search-results"></div>
     </div>
 
+
     <script>
-        const form = document.getElementById('search-form');
-        const searchInput = document.getElementById('search-input');
-        const searchResults = document.getElementById('search-results');
-        const playerContainer = document.getElementById('player-container');
-        const player = document.getElementById('player');
+     
+     const form = document.getElementById('search-form');
+const searchInput = document.getElementById('search-input');
+const searchResults = document.getElementById('search-results');
+const playerContainer = document.getElementById('player-container');
+const player = document.getElementById('player');
+const micButton = document.getElementById('mic-button');
 
-        document.addEventListener('DOMContentLoaded', loadPopularVideos);
+document.addEventListener('DOMContentLoaded', loadPopularVideos);
 
-        form.addEventListener('submit', function(event) {
+form.addEventListener('submit', function(event) {
+    event.preventDefault();
+    const searchTerm = searchInput.value.trim();
+    if (searchTerm === '') {
+        alert('Please enter a search term');
+        return;
+    }
+    if (searchTerm.includes('channel:')) {
+        const channelName = searchTerm.split('channel:')[1].trim();
+        searchYouTubeChannel(channelName);
+    } else {
+        searchYouTube(searchTerm);
+    }
+});
+
+micButton.addEventListener('click', function() {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.start();
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        searchInput.value = transcript;
+        searchWithMic(transcript); // New function to handle search using microphone
+    };
+
+    recognition.onerror = function(event) {
+        alert('Error occurred in recognition: ' + event.error);
+    };
+});
+
+function loadPopularVideos() {
+    const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
+    const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=US&maxResults=10&key=${apiKey}`;
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data.items);
+        })
+        .catch(error => console.error('Error fetching popular videos:', error));
+}
+
+function searchYouTube(searchTerm) {
+    const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
+    const maxResults = 100;
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&type=video&q=${searchTerm}&maxResults=${maxResults}`;
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data.items);
+        })
+        .catch(error => console.error('Error fetching data:', error));
+}
+
+function searchYouTubeChannel(channelName) {
+    const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&type=channel&q=${channelName}`;
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            const channelId = data.items[0].id.channelId;
+            fetchChannelVideos(channelId);
+        })
+        .catch(error => console.error('Error fetching channel data:', error));
+}
+
+function fetchChannelVideos(channelId) {
+    const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&channelId=${channelId}&maxResults=10`;
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data.items);
+        })
+        .catch(error => console.error('Error fetching channel videos:', error));
+}
+
+function displayResults(items) {
+    searchResults.innerHTML = '';
+
+    items.forEach(item => {
+        const videoId = item.id.videoId || item.id.channelId;
+        const videoTitle = item.snippet.title;
+        const videoDescription = item.snippet.description;
+        const videoThumbnail = item.snippet.thumbnails.medium.url;
+
+        const videoItem = document.createElement('div');
+        videoItem.classList.add('video-item');
+        videoItem.innerHTML = `
+            <a href="#" data-video-id="${videoId}">
+                <img src="${videoThumbnail}" alt="${videoTitle}">
+                <h2>${videoTitle}</h2>
+            </a>
+        `;
+        searchResults.appendChild(videoItem);
+
+        videoItem.addEventListener('click', function(event) {
             event.preventDefault();
-            const searchTerm = searchInput.value.trim();
-            if (searchTerm === '') {
-                alert('Please enter a search term');
-                return;
-            }
-            if (searchTerm.includes('channel:')) {
-                const channelName = searchTerm.split('channel:')[1].trim();
-                searchYouTubeChannel(channelName);
-            } else {
-                searchYouTube(searchTerm);
-            }
+            const videoId = this.querySelector('a').getAttribute('data-video-id');
+            playVideo(videoId);
         });
+    });
+}
 
-        function loadPopularVideos() {
-            const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
-            const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&chart=mostPopular&regionCode=US&maxResults=10&key=${apiKey}`;
+function playVideo(videoId) {
+    player.innerHTML = '';
 
-            fetch(apiUrl)
-                .then(response => response.json())
-                .then(data => {
-                    displayResults(data.items);
-                })
-                .catch(error => console.error('Error fetching popular videos:', error));
-        }
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&fs=1`;
+    iframe.width = '100%';
+    iframe.height = '315';
+    iframe.allow = 'autoplay; fullscreen';
 
-        function searchYouTube(searchTerm) {
-            const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
-            const maxResults = 100;
-            const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&type=video&q=${searchTerm}&maxResults=${maxResults}`;
+    player.appendChild(iframe);
 
-            fetch(apiUrl)
-                .then(response => response.json())
-                .then(data => {
-                    displayResults(data.items);
-                })
-                .catch(error => console.error('Error fetching data:', error));
-        }
+    playerContainer.style.display = 'block';
+    playerContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-        function searchYouTubeChannel(channelName) {
-            const apiKey = 'AIzaSyD8ai10gRxNz29sGxgJMOz1t4-p6n4YgNE';
-            const apiUrl = `https://www.googleapis.com/youtube/v3/search?key=${apiKey}&part=snippet&type=channel&q=${channelName}`;
+function searchWithMic(searchTerm) {
+    searchYouTube(searchTerm); // You can modify this to fit your specific mic search functionality
+}
 
-            fetch(apiUrl)
-                .then(response => response.json())
-                .then(data => {
-                    const channelId = data.items[0].id.channelId;
-                    fetchChannelVideos(channelId);
-                })
-                .catch(error => console.error('Error fetching channel data:', error));
-        }
+       </SCRIPT>
 
-      
-
-        function displayResults(items) {
-            searchResults.innerHTML = '';
-
-            items.forEach(item => {
-                const videoId = item.id.videoId || item.id.channelId;
-                const videoTitle = item.snippet.title;
-                const videoDescription = item.snippet.description;
-                const videoThumbnail = item.snippet.thumbnails.medium.url;
-
-                const videoItem = document.createElement('div');
-                videoItem.classList.add('video-item');
-                videoItem.innerHTML = `
-                    <a href="#" data-video-id="${videoId}">
-                        <img src="${videoThumbnail}" alt="${videoTitle}">
-                        <h2>${videoTitle}</h2>
-                       
-                    </a>
-                `;
-                searchResults.appendChild(videoItem);
-
-                videoItem.addEventListener('click', function(event) {
-                    event.preventDefault();
-                    const videoId = this.querySelector('a').getAttribute('data-video-id');
-                    playVideo(videoId);
-                });
-            });
-        }
-
-        function playVideo(videoId) {
-            player.innerHTML = '';
-
-            const iframe = document.createElement('iframe');
-            iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&fs=1`;
-            iframe.width = '100%';
-            iframe.height = '315';
-            iframe.allow = 'autoplay; fullscreen';
-
-            player.appendChild(iframe);
-
-            playerContainer.style.display = 'block';
-            playerContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    </script>
 </body>
 </html>
